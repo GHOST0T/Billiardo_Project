@@ -15,6 +15,7 @@ export class Ball {
     this.angularVelocity = new THREE.Vector3(0, 0, 0); 
     this.friction = 0.988; 
     this.mass = 1.0; 
+    this.cushionRestitution = 0.85;
 
     this.cushionSound = new Audio(cushionHitUrl);
     this.cushionSound.load();
@@ -109,8 +110,8 @@ export class Ball {
       this.cushionSound.currentTime = 0;
       this.cushionSound.volume = Math.min(1.0, Math.max(0.1, strikeImpact * 2.5));
       this.cushionSound.play();
-      this.velocity.x = -this.velocity.x * 0.85; 
-      this.angularVelocity.z = -this.angularVelocity.z * 0.85; 
+      this.velocity.x = -this.velocity.x * this.cushionRestitution;; 
+      this.angularVelocity.z = -this.angularVelocity.z * this.cushionRestitution;; 
       this.velocity.z += this.angularVelocity.y * this.radius * 0.5;
     } 
     else if (this.position.x < -boundaryX) { 
@@ -119,8 +120,8 @@ export class Ball {
       this.cushionSound.currentTime = 0;
       this.cushionSound.volume = Math.min(1.0, Math.max(0.1, strikeImpact * 2.5));
       this.cushionSound.play();
-      this.velocity.x = -this.velocity.x * 0.85; 
-      this.angularVelocity.z = -this.angularVelocity.z * 0.85; 
+      this.velocity.x = -this.velocity.x * this.cushionRestitution;; 
+      this.angularVelocity.z = -this.angularVelocity.z * this.cushionRestitution;; 
       this.velocity.z -= this.angularVelocity.y * this.radius * 0.5;
     }
 
@@ -130,8 +131,8 @@ export class Ball {
       this.cushionSound.currentTime = 0;
       this.cushionSound.volume = Math.min(1.0, Math.max(0.1, strikeImpact * 2.5));
       this.cushionSound.play();
-      this.velocity.z = -this.velocity.z * 0.85; 
-      this.angularVelocity.x = -this.angularVelocity.x * 0.85; 
+      this.velocity.z = -this.velocity.z * this.cushionRestitution;; 
+      this.angularVelocity.x = -this.angularVelocity.x * this.cushionRestitution;; 
       this.velocity.x -= this.angularVelocity.y * this.radius * 0.5;
     } 
     else if (this.position.z < -boundaryZ) { 
@@ -140,8 +141,8 @@ export class Ball {
       this.cushionSound.currentTime = 0;
       this.cushionSound.volume = Math.min(1.0, Math.max(0.1, strikeImpact * 2.5));
       this.cushionSound.play();
-      this.velocity.z = -this.velocity.z * 0.85; 
-      this.angularVelocity.x = -this.angularVelocity.x * 0.85; 
+      this.velocity.z = -this.velocity.z * this.cushionRestitution;; 
+      this.angularVelocity.x = -this.angularVelocity.x * this.cushionRestitution;; 
       this.velocity.x += this.angularVelocity.y * this.radius * 0.5;
     }
     this.mesh.position.copy(this.position);

@@ -21,63 +21,78 @@ class Game {
     this.balls = [];
     this.createAllBalls();
     this.cue = new Cue(this.scene, this.cueBall);
-    
-    this.cueAngle = 0;      
-    this.spinOffset = 0;    
+
+    this.cueAngle = 0;
+    this.spinOffset = 0;
     this.isCharging = false;
 
     this.initControls();
-    
+
     window.addEventListener("resize", () => this.onWindowResize());
-    
+
     this.gui = new GUI({ title: "Physics Controls" });
-    
+
     this.gui.domElement.style.position = "absolute";
-    this.gui.domElement.style.top = "70px"; 
+    this.gui.domElement.style.top = "70px";
     this.gui.domElement.style.right = "10px";
 
     this.physicsParams = {
-      friction: 0.985,       
-      restitution: 0.94,     
-      topBackSpin: 0.0, 
+      friction: 0.985,
+      restitution: 0.94,
+      cushionRestitution: 0.85,
+      topBackSpin: 0.0,
       sideSpin: 0.0,
-      cueBallMass: 1.0,      
-      objectBallsMass: 1.0   
+      cueBallMass: 1.0,
+      objectBallsMass: 1.0,
     };
 
-    this.gui.add(this.physicsParams, "topBackSpin", -2.0, 2.0, 0.1)
+    this.gui
+      .add(this.physicsParams, "topBackSpin", -2.0, 2.0, 0.1)
       .name("Top / Back Spin")
       .onChange((value) => {});
 
-    this.gui.add(this.physicsParams, "sideSpin", -2.0, 2.0, 0.1)
+    this.gui
+      .add(this.physicsParams, "sideSpin", -2.0, 2.0, 0.1)
       .name("Side Spin")
       .onChange((value) => {});
 
-    this.gui.add(this.physicsParams, "friction", 0.90, 1.0, 0.001) 
+    this.gui
+      .add(this.physicsParams, "friction", 0.9, 1.0, 0.001)
       .name("Friction (الاحتكاك)")
       .onChange((value) => {
         this.cueBall.friction = value;
-        this.balls.forEach(ball => ball.friction = value);
+        this.balls.forEach((ball) => (ball.friction = value));
       });
 
-    this.gui.add(this.physicsParams, "restitution", 0.5, 1.0, 0.01) 
+    this.gui
+      .add(this.physicsParams, "restitution", 0.5, 1.0, 0.01)
       .name("Restitution (الارتداد)")
       .onChange((value) => {
         if (this.physics) {
-          this.physics.restitution = value; 
+          this.physics.restitution = value;
         }
       });
 
-    this.gui.add(this.physicsParams, "cueBallMass", 0.2, 5.0, 0.1)
-      .name("وزن الكرة البيضاء")
+    this.gui
+      .add(this.physicsParams, "cushionRestitution", 0.3, 1.0, 0.01)
+      .name("Cushion (ارتداد الحواف)")
       .onChange((value) => {
-        this.cueBall.mass = value; 
+        if (this.cueBall) this.cueBall.cushionRestitution = value;
+        this.balls.forEach((ball) => (ball.cushionRestitution = value));
       });
 
-    this.gui.add(this.physicsParams, "objectBallsMass", 0.2, 5.0, 0.1)
+    this.gui
+      .add(this.physicsParams, "cueBallMass", 0.2, 5.0, 0.1)
+      .name("وزن الكرة البيضاء")
+      .onChange((value) => {
+        this.cueBall.mass = value;
+      });
+
+    this.gui
+      .add(this.physicsParams, "objectBallsMass", 0.2, 5.0, 0.1)
       .name("وزن الكرات الملونة")
       .onChange((value) => {
-        this.balls.forEach(ball => {
+        this.balls.forEach((ball) => {
           if (!ball.isCueBall) ball.mass = value;
         });
       });
@@ -87,13 +102,21 @@ class Game {
   }
 
   initCamera() {
-    this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    this.camera = new THREE.PerspectiveCamera(
+      45,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000,
+    );
     this.camera.position.set(0, 15, 22);
   }
 
   initRenderer() {
     this.canvas = document.getElementById("billardCanvas") || undefined;
-    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: this.canvas,
+      antialias: true,
+    });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     if (!this.canvas) document.body.appendChild(this.renderer.domElement);
@@ -110,21 +133,30 @@ class Game {
   createAllBalls() {
     const ballRadius = 0.25;
     this.cueBall = new Ball(this.scene, -5, 0, ballRadius, 0, 0xffffff, false);
-    
-    this.balls.push(this.cueBall); 
+
+    this.balls.push(this.cueBall);
 
     const poolBallsConfig = [
-      { num: 1, color: 0xffd700, striped: false }, { num: 9, color: 0xffd700, striped: true },
-      { num: 2, color: 0x0000ff, striped: false }, { num: 10, color: 0x0000ff, striped: true },
-      { num: 8, color: 0x000000, striped: false }, { num: 3, color: 0xff0000, striped: false },
-      { num: 11, color: 0xff0000, striped: true }, { num: 4, color: 0x4b0082, striped: false },
-      { num: 12, color: 0x4b0082, striped: true }, { num: 5, color: 0x222222, striped: false },
-      { num: 13, color: 0x8b0000, striped: true }, { num: 6, color: 0x008000, striped: false },
-      { num: 14, color: 0x008000, striped: true }, { num: 15, color: 0x222222, striped: true },
+      { num: 1, color: 0xffd700, striped: false },
+      { num: 9, color: 0xffd700, striped: true },
+      { num: 2, color: 0x0000ff, striped: false },
+      { num: 10, color: 0x0000ff, striped: true },
+      { num: 8, color: 0x000000, striped: false },
+      { num: 3, color: 0xff0000, striped: false },
+      { num: 11, color: 0xff0000, striped: true },
+      { num: 4, color: 0x4b0082, striped: false },
+      { num: 12, color: 0x4b0082, striped: true },
+      { num: 5, color: 0x222222, striped: false },
+      { num: 13, color: 0x8b0000, striped: true },
+      { num: 6, color: 0x008000, striped: false },
+      { num: 14, color: 0x008000, striped: true },
+      { num: 15, color: 0x222222, striped: true },
       { num: 7, color: 0x8b0000, striped: false },
     ];
 
-    const startX = 4.0; const startZ = 0.0; let index = 0;
+    const startX = 4.0;
+    const startZ = 0.0;
+    let index = 0;
     const rowSpacing = ballRadius * 2 * Math.cos(Math.PI / 6);
 
     for (let row = 0; row < 5; row++) {
@@ -132,7 +164,15 @@ class Game {
         const x = startX + row * rowSpacing;
         const z = startZ + (col - row / 2) * (ballRadius * 2.02);
         const config = poolBallsConfig[index];
-        const ball = new Ball(this.scene, x, z, ballRadius, config.num, config.color, config.striped);
+        const ball = new Ball(
+          this.scene,
+          x,
+          z,
+          ballRadius,
+          config.num,
+          config.color,
+          config.striped,
+        );
         this.balls.push(ball);
         index++;
       }
@@ -144,14 +184,16 @@ class Game {
     this.controls.dampingFactor = 0.05;
 
     window.addEventListener("keydown", (event) => {
-      if (event.key === "ArrowLeft" || event.key === "a" || event.key === "A") this.cueAngle += 0.05;
-      if (event.key === "ArrowRight" || event.key === "d" || event.key === "D") this.cueAngle -= 0.05;
-      
-      if (event.key === "w" || event.key === "W") { 
-        this.spinOffset += 0.1; 
+      if (event.key === "ArrowLeft" || event.key === "a" || event.key === "A")
+        this.cueAngle += 0.05;
+      if (event.key === "ArrowRight" || event.key === "d" || event.key === "D")
+        this.cueAngle -= 0.05;
+
+      if (event.key === "w" || event.key === "W") {
+        this.spinOffset += 0.1;
       }
-      if (event.key === "s" || event.key === "S") { 
-        this.spinOffset -= 0.1; 
+      if (event.key === "s" || event.key === "S") {
+        this.spinOffset -= 0.1;
       }
 
       if (event.key === " ") {
@@ -175,15 +217,21 @@ class Game {
             this.cueBall.velocity.x = Math.cos(this.cueAngle) * finalVelocity;
             this.cueBall.velocity.z = Math.sin(this.cueAngle) * finalVelocity;
 
-            this.cueBall.angularVelocity.x = -Math.sin(this.cueAngle) * this.physicsParams.topBackSpin * finalVelocity;
-            this.cueBall.angularVelocity.z = Math.cos(this.cueAngle) * this.physicsParams.topBackSpin * finalVelocity;
-            this.cueBall.angularVelocity.y = this.physicsParams.sideSpin * finalVelocity;
+            this.cueBall.angularVelocity.x =
+              -Math.sin(this.cueAngle) *
+              this.physicsParams.topBackSpin *
+              finalVelocity;
+            this.cueBall.angularVelocity.z =
+              Math.cos(this.cueAngle) *
+              this.physicsParams.topBackSpin *
+              finalVelocity;
+            this.cueBall.angularVelocity.y =
+              this.physicsParams.sideSpin * finalVelocity;
           }
         }
       }
     });
   }
-  
 
   onWindowResize() {
     this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -197,7 +245,7 @@ class Game {
 
     const ballUI = document.createElement("div");
     const hexColor = "#" + ballColor.toString(16).padStart(6, "0");
-    
+
     ballUI.style.width = "25px";
     ballUI.style.height = "25px";
     ballUI.style.borderRadius = "50%";
@@ -206,9 +254,11 @@ class Game {
     ballUI.style.justifyContent = "center";
     ballUI.style.fontSize = "11px";
     ballUI.style.fontWeight = "bold";
-    ballUI.style.color = ballNumber === 8 || ballColor === 0x000000 ? "white" : "black";
-    ballUI.style.boxShadow = "inset -3px -3px 6px rgba(0,0,0,0.4), 2px 2px 4px rgba(0,0,0,0.3)";
-    
+    ballUI.style.color =
+      ballNumber === 8 || ballColor === 0x000000 ? "white" : "black";
+    ballUI.style.boxShadow =
+      "inset -3px -3px 6px rgba(0,0,0,0.4), 2px 2px 4px rgba(0,0,0,0.3)";
+
     if (isStriped) {
       ballUI.style.background = `linear-gradient(to bottom, #ffffff 20%, ${hexColor} 20%, ${hexColor} 80%, #ffffff 80%)`;
     } else {
@@ -224,7 +274,7 @@ class Game {
     numCircle.style.alignItems = "center";
     numCircle.style.justifyContent = "center";
     numCircle.innerText = ballNumber;
-    
+
     ballUI.appendChild(numCircle);
     bar.appendChild(ballUI);
   }
@@ -236,24 +286,36 @@ class Game {
     if (this.physics) {
       const subSteps = 3;
       for (let i = 0; i < subSteps; i++) {
-        this.physics.updateCollisions(this.cueBall, this.balls, this.table.width, this.table.length);
-        this.balls.forEach((ball) => ball.update(this.table.width, this.table.length, subSteps));
+        this.physics.updateCollisions(
+          this.cueBall,
+          this.balls,
+          this.table.width,
+          this.table.length,
+        );
+        this.balls.forEach((ball) =>
+          ball.update(this.table.width, this.table.length, subSteps),
+        );
       }
 
+      const fallenBalls = this.physics.checkPockets(
+        this.cueBall,
+        this.balls,
+        this.table.pockets,
+      );
 
-      const fallenBalls = this.physics.checkPockets(this.cueBall, this.balls, this.table.pockets);
-      
       if (fallenBalls.length > 0) {
         fallenBalls.forEach((ball) => {
           this.addBallToUI(ball.number, ball.baseColor, ball.isStriped);
-          this.scene.remove(ball.mesh); 
-          this.balls = this.balls.filter((b) => b !== ball); 
+          this.scene.remove(ball.mesh);
+          this.balls = this.balls.filter((b) => b !== ball);
         });
       }
     }
 
     if (this.cue) {
-      const isMoving = this.balls.some(b => b.velocity.length() > 0.0001 || b.position.y > b.radius + 0.022);
+      const isMoving = this.balls.some(
+        (b) => b.velocity.length() > 0.0001 || b.position.y > b.radius + 0.022,
+      );
       if (isMoving) {
         this.cue.mesh.visible = false;
       } else {
@@ -273,7 +335,8 @@ class Game {
 
     this.renderer.render(this.scene, this.camera);
   }
-
 }
 
-window.addEventListener("DOMContentLoaded", () => { new Game(); });
+window.addEventListener("DOMContentLoaded", () => {
+  new Game();
+});
